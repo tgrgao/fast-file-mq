@@ -8,15 +8,16 @@ int main(int argc, char *argv[]) {
     // }
 
     FileMQ myQ = FileMQ(".");
+    int ret;
 
     char buf[10] = "Hello";
     unsigned id;
-    myQ.enqueue(buf, &id, 10);
+    ret = myQ.enqueue(buf, &id, 10);
 
-    std::cout << "Enqueue id" << id << std::endl;
+    std::cout << ret << " " << "Enqueue id" << id << std::endl;
 
     char buf2[10];
     size_t size;
-    myQ.dequeue(buf2, &id, &size);
-    std::cout << "Dequeue id" << id << std::endl;
+    myQ.dequeue(buf2, &id, &size, 10);
+    std::cout << ret << " "  << "Dequeue id" << id << " " << buf2 << std::endl;
 }

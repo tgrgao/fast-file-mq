@@ -20,14 +20,13 @@ class FileMQ {
         int fd_meta;
         int fd_data;
         struct flock metadata_lock;
-        struct flock data_lock;
     
     public:
         FileMQ(std::string queue_file_path);
         ~FileMQ();
         // FileMQ(std::string queue_file_path, int metadata_size, int data_offset);
         int enqueue(void *buf, unsigned *id, size_t size);
-        int dequeue(void *buf, unsigned *id, size_t *size);
+        int dequeue(void *buf, unsigned *id, size_t *size, size_t max_size);
         int ack(unsigned id);
         int nack(unsigned id);
         int fack(unsigned id);
