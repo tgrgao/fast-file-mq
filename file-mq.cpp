@@ -35,6 +35,24 @@ int read_unsigned(int fd, off_t addr, unsigned *num_ptr) {
     return 0;
 }
 
+int read_metadata_entry(int fd, off_t addr, struct MetadataEntry *entry) {
+    lseek(fd, addr, SEEK_SET);
+    read(fd, entry, sizeof(*entry));
+    return 0;
+}
+
+int write_unsigned(int fd, off_t addr, unsigned *num_ptr) {
+    lseek(fd, addr, SEEK_SET);
+    write(fd, num_ptr, sizeof(*num_ptr));
+    return 0;
+}
+
+int write_metadata_entry(int fd, off_t addr, struct MetadataEntry *entry) {
+    lseek(fd, addr, SEEK_SET);
+    write(fd, entry, sizeof(*entry));
+    return 0;
+}
+
 ssize_t get_file_size(int fd) {
     struct stat st;
     fstat(fd, &st);
@@ -86,17 +104,15 @@ FileMQ::~FileMQ() {
 int FileMQ::enqueue(void *buf, unsigned *id, size_t size) {
     lock_file(fd_meta, &metadata_lock);
 
-    // make metadata entry
+    read_unsigned(fd_meta, METADATA_AT_ID_ADDR, id);
+
+    // make metadata entry and write at end of metadata file
     MetadataEntry metadata_entry; 
-    lseek(fd_meta, METADATA_AT_ID_ADDR, SEEK_SET);
-    read(fd_meta, &(metadata_entry.id), sizeof(*id));
+    metadata_entry.id = *id;
     metadata_entry.data_ptr = get_file_size(fd_meta);
     metadata_entry.data_size = size;
     metadata_entry.status = EntryStatus::READY;
-    lseek(fd_meta, 0, SEEK_END);
-    write(fd_meta, &metadata_entry, sizeof(metadata_entry));
-
-    *id = metadata_entry.id;
+    write_metadata_entry(fd_meta, get_file_size(fd_meta), &metadata_entry);
 
     // write the data
     lseek(fd_data, 0, SEEK_END);
@@ -117,9 +133,10 @@ int FileMQ::enqueue(void *buf, unsigned *id, size_t size) {
 }
 
 int FileMQ::dequeue(void *buf, unsigned *id, size_t *size, size_t max_size) {
+    lock_file(fd_meta, &metadata_lock);
+
     off_t ready_ptr;
-    lseek(fd_meta, METADATA_READY_PTR_ADDR, SEEK_SET);
-    read(fd_meta, &ready_ptr, sizeof(ready_ptr));
+    read_unsigned(fd_meta, METADATA_READY_PTR_ADDR, (unsigned *) &ready_ptr);
 
     if (ready_ptr == get_file_size(fd_meta)) {
         return -1; // nothing ready
@@ -168,10 +185,14 @@ int FileMQ::dequeue(void *buf, unsigned *id, size_t *size, size_t max_size) {
     lseek(fd_meta, METADATA_READY_PTR_ADDR, SEEK_SET);
     write(fd_meta, &ready_ptr, sizeof(ready_ptr));
 
+    unlock_file(fd_meta, &metadata_lock);
+
     return 0;
 }
 
 int FileMQ::ack(unsigned id) {
+    lock_file(fd_meta, &metadata_lock);
+
     MetadataEntry metadata_entry;
     off_t metadata_entry_ptr = METADATA_START + (id * sizeof(metadata_entry));
     lseek(fd_meta, metadata_entry_ptr, SEEK_SET);
@@ -185,10 +206,14 @@ int FileMQ::ack(unsigned id) {
     lseek(fd_meta, metadata_entry_ptr, SEEK_SET);
     write(fd_meta, &metadata_entry, sizeof(metadata_entry));
 
+    unlock_file(fd_meta, &metadata_lock);
+
     return 0;
 }
 
 int FileMQ::nack(unsigned id) {
+    lock_file(fd_meta, &metadata_lock);
+
     MetadataEntry metadata_entry;
     off_t metadata_entry_ptr = METADATA_START + (id * sizeof(metadata_entry));
     lseek(fd_meta, metadata_entry_ptr, SEEK_SET);
@@ -211,10 +236,14 @@ int FileMQ::nack(unsigned id) {
         write(fd_meta, &metadata_entry_ptr, sizeof(metadata_entry_ptr));
     }
 
+    unlock_file(fd_meta, &metadata_lock);
+
     return 0;
 }
 
 int FileMQ::fack(unsigned id) {
+    lock_file(fd_meta, &metadata_lock);
+
     MetadataEntry metadata_entry;
     off_t metadata_entry_ptr = METADATA_START + (id * sizeof(metadata_entry));
     lseek(fd_meta, metadata_entry_ptr, SEEK_SET);
@@ -227,6 +256,8 @@ int FileMQ::fack(unsigned id) {
     metadata_entry.status = EntryStatus::FACK;
     lseek(fd_meta, metadata_entry_ptr, SEEK_SET);
     write(fd_meta, &metadata_entry, sizeof(metadata_entry));
+
+    unlock_file(fd_meta, &metadata_lock);
 
     return 0;
 }
