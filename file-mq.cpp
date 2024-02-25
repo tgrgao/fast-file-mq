@@ -33,19 +33,7 @@ void print_metadata_bytes(int fd) {
     }
 }
 
-enum EntryStatus {
-    READY,
-    UNACK,
-    ACK,
-    FACK
-};
 
-struct MetadataEntry {
-    unsigned id;
-    unsigned data_ptr;
-    unsigned data_size;
-    unsigned status;
-};
 
 int increment_unsigned(int fd, off_t addr) {
     unsigned num;
