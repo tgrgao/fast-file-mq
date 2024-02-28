@@ -6,6 +6,7 @@
 
 #include "DataStorage.h"
 #include "MetadataStorage.h"
+#include "QueueLock.h"
 
 class FileMQ {
     enum class Status;
@@ -13,12 +14,9 @@ class FileMQ {
 
     private:
         Status status;
+        QueueLock queue_lock;
         MetadataStorage metadata_storage;
         DataStorage data_storage;
-        
-        int lock_fd;
-        struct flock file_lock;
-        std::mutex thread_lock;
     
     public:
         enum class Status {
