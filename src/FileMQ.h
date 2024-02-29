@@ -9,15 +9,6 @@
 #include "QueueLock.h"
 
 class FileMQ {
-    enum class Status;
-    enum class Result;
-
-    private:
-        Status status;
-        QueueLock queue_lock;
-        MetadataStorage metadata_storage;
-        DataStorage data_storage;
-    
     public:
         enum class Status {
             OK,
@@ -26,7 +17,9 @@ class FileMQ {
 
         enum class Result {
             SUCCESS,
-            FAILURE
+            FAILURE,
+            SUCCESS_TRUNCATED_READ,
+            QUEUE_EMPTY
         };
 
         FileMQ(std::string queue_file_path);
@@ -34,9 +27,15 @@ class FileMQ {
 
         Status get_status() const {return status;};
 
-        Result enqueue(void *buf, unsigned *id, size_t size);
-        Result dequeue(void *buf, unsigned *id, size_t *size, size_t max_size);
+        Result enqueue(void *buf, unsigned *id, ssize_t size);
+        Result dequeue(void *buf, unsigned *id, ssize_t *size, ssize_t max_size);
         Result ack(unsigned id);
         Result nack(unsigned id);
         Result fack(unsigned id);
+
+    private:
+        Status status;
+        QueueLock queue_lock;
+        MetadataStorage metadata_storage;
+        DataStorage data_storage;
 };

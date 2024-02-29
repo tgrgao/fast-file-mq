@@ -1,12 +1,6 @@
 #include <string>
 
 class QueueLock {
-    enum class Status;
-    enum class Result;
-
-    private:
-        Status status;
-
     public:
         enum class Status {
             OK,
@@ -25,4 +19,7 @@ class QueueLock {
 
         Result lock();
         Result unlock();
+
+    private:
+        Status status;
 };
