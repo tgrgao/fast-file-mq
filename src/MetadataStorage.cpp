@@ -122,11 +122,26 @@ MetadataStorage::Result MetadataStorage::advance_ready_ptr() {
     ++metadata.ready_ptr;
     while (metadata.ready_ptr < metadata.at_id) {
         MetadataEntry entry;
-        unsigned pos = metadata.ready_count - metadata.at_id;
+        unsigned pos = metadata.ready_ptr - metadata.smallest_id;
         if (read_entry(&entry, pos) != Result::SUCCESS) {
             return Result::FAILURE;
         }
         if (entry.status == MetadataEntry::EntryStatus::READY) {
+            break;
+        }
+    }
+    return Result::SUCCESS;
+}
+
+MetadataStorage::Result MetadataStorage::advance_ack_ptr() {
+    ++metadata.ack_ptr;
+    while (metadata.ack_ptr < metadata.at_id) {
+        MetadataEntry entry;
+        unsigned pos = metadata.ack_ptr - metadata.smallest_id;
+        if (read_entry(&entry, pos) != Result::SUCCESS) {
+            return Result::FAILURE;
+        }
+        if (entry.status != MetadataEntry::EntryStatus::ACK || entry.status != MetadataEntry::EntryStatus::FACK) {
             break;
         }
     }
@@ -181,6 +196,7 @@ MetadataStorage::Result MetadataStorage::dequeue(unsigned *id, off_t *data_off, 
         return Result::FAILURE;
     }
 
+    *id = entry.id;
     *data_off = entry.data_off;
     *size = entry.data_size;
     entry.status = MetadataEntry::EntryStatus::UNACK;
@@ -189,10 +205,117 @@ MetadataStorage::Result MetadataStorage::dequeue(unsigned *id, off_t *data_off, 
         return Result::FAILURE;
     }
 
+    --metadata.ready_count;
     ++metadata.unack_count;
 
     if (advance_ready_ptr() != Result::SUCCESS) {
         return Result::FAILURE;
+    }
+
+    if (write_metadata() != Result::SUCCESS) {
+        return Result::FAILURE;
+    }
+
+    return Result::SUCCESS;
+}
+
+MetadataStorage::Result MetadataStorage::ack(unsigned id) {
+    if (status == Status::STALE_METADATA && read_metadata() != Result::SUCCESS) {
+        return Result::FAILURE;
+    }
+
+    struct MetadataEntry entry;
+    unsigned entry_pos = id - metadata.smallest_id;
+
+    if (read_entry(&entry, entry_pos) != Result::SUCCESS) {
+        return Result::FAILURE;
+    }
+
+    if (entry.status != MetadataEntry::EntryStatus::UNACK) {
+        return Result::FAILURE;
+    }
+
+    entry.status = MetadataEntry::EntryStatus::ACK;
+
+    if (write_entry(&entry, entry_pos) != Result::SUCCESS) {
+        return Result::FAILURE;
+    }
+
+    --metadata.unack_count;
+    
+    if (advance_ack_ptr() != Result::SUCCESS) {
+        return Result::FAILURE;
+    }
+
+    if (write_metadata() != Result::SUCCESS) {
+        return Result::FAILURE;
+    }
+
+    return Result::SUCCESS;
+}
+
+MetadataStorage::Result MetadataStorage::fack(unsigned id) {
+    if (status == Status::STALE_METADATA && read_metadata() != Result::SUCCESS) {
+        return Result::FAILURE;
+    }
+
+    struct MetadataEntry entry;
+    unsigned entry_pos = id - metadata.smallest_id;
+
+    if (read_entry(&entry, entry_pos) != Result::SUCCESS) {
+        return Result::FAILURE;
+    }
+
+    if (entry.status != MetadataEntry::EntryStatus::UNACK) {
+        return Result::FAILURE;
+    }
+
+    entry.status = MetadataEntry::EntryStatus::FACK;
+
+    if (write_entry(&entry, entry_pos) != Result::SUCCESS) {
+        return Result::FAILURE;
+    }
+
+    --metadata.unack_count;
+    
+    if (advance_ack_ptr() != Result::SUCCESS) {
+        return Result::FAILURE;
+    }
+
+    if (write_metadata() != Result::SUCCESS) {
+        return Result::FAILURE;
+    }
+
+    return Result::SUCCESS;
+}
+
+MetadataStorage::Result MetadataStorage::nack(unsigned id) {
+    if (status == Status::STALE_METADATA && read_metadata() != Result::SUCCESS) {
+        return Result::FAILURE;
+    }
+
+    struct MetadataEntry entry;
+    unsigned entry_pos = id - metadata.smallest_id;
+
+    if (read_entry(&entry, entry_pos) != Result::SUCCESS) {
+        return Result::FAILURE;
+    }
+
+    if (entry.status != MetadataEntry::EntryStatus::UNACK) {
+        return Result::FAILURE;
+    }
+
+    entry.status = MetadataEntry::EntryStatus::READY;
+
+    if (write_entry(&entry, entry_pos) != Result::SUCCESS) {
+        return Result::FAILURE;
+    }
+
+    --metadata.unack_count;
+    ++metadata.ready_count;
+    
+    if (id < metadata.ready_ptr) {
+        metadata.ready_ptr = id;
     }
 
     if (write_metadata() != Result::SUCCESS) {

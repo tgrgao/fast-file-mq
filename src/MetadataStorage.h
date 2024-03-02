@@ -24,6 +24,9 @@ class MetadataStorage {
 
         Result enqueue(unsigned *id, ssize_t size);
         Result dequeue(unsigned *id, off_t *data_off, ssize_t *size);
+        Result ack(unsigned id);
+        Result fack(unsigned id);
+        Result nack(unsigned id);
     
     private: 
 
@@ -63,4 +66,5 @@ class MetadataStorage {
         Result write_entry(struct MetadataEntry *metadata_entry, unsigned position);
 
         Result advance_ready_ptr();
+        Result advance_ack_ptr();
 };

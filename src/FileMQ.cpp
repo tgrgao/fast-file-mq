@@ -80,13 +80,58 @@ FileMQ::Result FileMQ::dequeue(void *buf, unsigned *id, ssize_t *size, ssize_t m
 }
 
 FileMQ::Result FileMQ::ack(unsigned id) {
+    if (status != Status::OK) {
+        std::cout << "Error: Queue not OK.\n";
+        return Result::FAILURE;
+    }
 
+    if (queue_lock.lock() == QueueLock::Result::FAILURE) {
+        return Result::FAILURE;
+    }
+
+    metadata_storage.make_stale();
+
+    if (metadata_storage.ack(id) != MetadataStorage::Result::SUCCESS) {
+        return Result::FAILURE;
+    }
+
+    return Result::SUCCESS;
 }
 
 FileMQ::Result FileMQ::nack(unsigned id) {
+    if (status != Status::OK) {
+        std::cout << "Error: Queue not OK.\n";
+        return Result::FAILURE;
+    }
 
+    if (queue_lock.lock() == QueueLock::Result::FAILURE) {
+        return Result::FAILURE;
+    }
+
+    metadata_storage.make_stale();
+
+    if (metadata_storage.nack(id) != MetadataStorage::Result::SUCCESS) {
+        return Result::FAILURE;
+    }
+
+    return Result::SUCCESS;
 }
 
 FileMQ::Result FileMQ::fack(unsigned id) {
+    if (status != Status::OK) {
+        std::cout << "Error: Queue not OK.\n";
+        return Result::FAILURE;
+    }
 
+    if (queue_lock.lock() == QueueLock::Result::FAILURE) {
+        return Result::FAILURE;
+    }
+
+    metadata_storage.make_stale();
+
+    if (metadata_storage.fack(id) != MetadataStorage::Result::SUCCESS) {
+        return Result::FAILURE;
+    }
+
+    return Result::SUCCESS;
 }
