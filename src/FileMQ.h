@@ -11,6 +11,7 @@
 class FileMQ {
     public:
         enum class Status {
+            NOT_INITIALIZED,
             OK,
             INITIALIZATION_FAILED
         };
@@ -18,12 +19,15 @@ class FileMQ {
         enum class Result {
             SUCCESS,
             FAILURE,
+            CRITICAL_FAILURE,
             SUCCESS_TRUNCATED_READ,
             QUEUE_EMPTY
         };
 
-        FileMQ(std::string queue_file_path);
+        FileMQ();
         ~FileMQ();
+
+        Result init(std::string queue_file_path);
 
         Status get_status() const {return status;};
 

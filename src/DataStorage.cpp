@@ -2,7 +2,13 @@
 
 #include <iostream>
 
-DataStorage::DataStorage(std::string queue_dir_path) {
+DataStorage::DataStorage() {
+    status = Status::NOT_INITIALIZED;
+}
+
+DataStorage::~DataStorage() {}
+
+DataStorage::Result DataStorage::init(std::string queue_dir_path) {
     std::string data_file_path = queue_dir_path + "/data.bytes";
 
     if (!std::filesystem::exists(data_file_path)) {
@@ -10,7 +16,7 @@ DataStorage::DataStorage(std::string queue_dir_path) {
         if (!data_fstream.is_open()) {
             std::cout << "Error: failed to create data file.\n";
             status = Status::INITIALIZATION_FAILED;
-            return;
+            return Result::FAILURE;
         }
         data_fstream.close();
     }
@@ -19,13 +25,12 @@ DataStorage::DataStorage(std::string queue_dir_path) {
     if (!data_fstream.is_open()) {
         std::cout << "Error: failed to open data file.\n";
         status = Status::INITIALIZATION_FAILED;
-        return;
+        return Result::FAILURE;
     }
 
     status = Status::OK;
+    return Result::SUCCESS;
 }
-
-DataStorage::~DataStorage() {}
 
 DataStorage::Result DataStorage::put_data(void *buf, ssize_t size) {
     data_fstream.seekp(0, std::ios::end);

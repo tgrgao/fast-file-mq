@@ -3,6 +3,7 @@
 class DataStorage {
     public:
         enum class Status {
+            NOT_INITIALIZED,
             OK,
             INITIALIZATION_FAILED
         };
@@ -12,8 +13,10 @@ class DataStorage {
             FAILURE
         };
 
-        DataStorage(std::string queue_dir_path);
+        DataStorage();
         ~DataStorage();
+
+        Result init(std::string queue_dir_path);
 
         Status get_status() const {return status;};
 

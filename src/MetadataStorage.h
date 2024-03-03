@@ -4,6 +4,7 @@ class MetadataStorage {
 
     public:
         enum class Status {
+            NOT_INITIALIZED,
             OK,
             INITIALIZATION_FAILED,
             STALE_METADATA
@@ -15,8 +16,10 @@ class MetadataStorage {
             QUEUE_EMPTY
         };
         
-        MetadataStorage(std::string queue_dir_path);
+        MetadataStorage();
         ~MetadataStorage();
+
+        Result init(std::string queue_dir_path);
 
         Status get_status() const {return status;};
         void make_stale() {status = Status::STALE_METADATA;};

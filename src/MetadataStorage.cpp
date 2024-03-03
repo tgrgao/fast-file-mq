@@ -2,7 +2,13 @@
 
 #include "iostream"
 
-MetadataStorage::MetadataStorage(std::string queue_dir_path) {
+MetadataStorage::MetadataStorage() {
+    status = Status::NOT_INITIALIZED;
+}
+
+MetadataStorage::~MetadataStorage() {}
+
+MetadataStorage::Result MetadataStorage::init(std::string queue_dir_path) {
     std::string metadata_file_path = queue_dir_path + "/metadata.bytes";
     std::string entries_file_path = queue_dir_path + "/entries.bytes";
 
@@ -13,12 +19,12 @@ MetadataStorage::MetadataStorage(std::string queue_dir_path) {
         if (!metadata_fstream.is_open()) {
             std::cout << "Error: failed to open metadata file.\n";
             status = Status::INITIALIZATION_FAILED;
-            return;
+            return Result::FAILURE;
         }
 
         if (read_metadata() != Result::SUCCESS) {
             status = Status::INITIALIZATION_FAILED;
-            return;
+            return Result::FAILURE;
         }
     } else {
         std::cout << "No existing metadata found. Creating fresh queue.\n";
@@ -27,7 +33,7 @@ MetadataStorage::MetadataStorage(std::string queue_dir_path) {
         if (!metadata_fstream.is_open()) {
             std::cout << "Error: failed to create metadata file.\n";
             status = Status::INITIALIZATION_FAILED;
-            return;
+            return Result::FAILURE;
         }
         metadata_fstream.close();
 
@@ -35,7 +41,7 @@ MetadataStorage::MetadataStorage(std::string queue_dir_path) {
         if (!metadata_fstream.is_open()) {
             std::cout << "Error: failed to open metadata file.\n";
             status = Status::INITIALIZATION_FAILED;
-            return;
+            return Result::FAILURE;
         }
 
         metadata.queue_size = 0;
@@ -50,7 +56,7 @@ MetadataStorage::MetadataStorage(std::string queue_dir_path) {
 
         if (write_metadata() != Result::SUCCESS) {
             status = Status::INITIALIZATION_FAILED;
-            return;
+            return Result::FAILURE;
         }
     }
 
@@ -59,7 +65,7 @@ MetadataStorage::MetadataStorage(std::string queue_dir_path) {
         if (!entries_fstream.is_open()) {
             std::cout << "Error: failed to create entries file.\n";
             status = Status::INITIALIZATION_FAILED;
-            return;
+            return Result::FAILURE;
         }
         entries_fstream.close();
     }
@@ -68,13 +74,12 @@ MetadataStorage::MetadataStorage(std::string queue_dir_path) {
     if (!entries_fstream.is_open()) {
         std::cout << "Error: failed to open entries file.\n";
         status = Status::INITIALIZATION_FAILED;
-        return;
+        return Result::FAILURE;
     }
 
     status = Status::OK;
+    return Result::SUCCESS;
 }
-
-MetadataStorage::~MetadataStorage() {}
 
 MetadataStorage::Result MetadataStorage::read_metadata() {
     metadata_fstream.seekg(0, std::ios_base::beg);

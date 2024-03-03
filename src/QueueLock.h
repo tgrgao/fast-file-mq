@@ -3,6 +3,7 @@
 class QueueLock {
     public:
         enum class Status {
+            NOT_INITIALIZED,
             OK,
             INITIALIZATION_FAILED
         };
@@ -12,8 +13,10 @@ class QueueLock {
             FAILURE
         };
 
-        QueueLock(std::string queue_file_path);
+        QueueLock();
         ~QueueLock();
+
+        Result init(std::string queue_file_path);
 
         Status get_status() const {return status;};
 

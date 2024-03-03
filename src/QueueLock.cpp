@@ -1,15 +1,19 @@
 #include "QueueLock.h"
 
-QueueLock::QueueLock(std::string queue_file_path) {
-    status = QueueLock::Status::OK;
+QueueLock::QueueLock() {
+    status = Status::NOT_INITIALIZED;
 }
 
 QueueLock::~QueueLock() {}
 
+QueueLock::Result QueueLock::init(std::string queue_file_path) {
+    status = Status::OK;
+}
+
 QueueLock::Result QueueLock::lock() {
-    return QueueLock::Result::SUCCESS;
+    return Result::SUCCESS;
 };
 
 QueueLock::Result QueueLock::unlock() {
-    return QueueLock::Result::SUCCESS;
+    return Result::SUCCESS;
 };
