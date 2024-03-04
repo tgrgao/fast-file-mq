@@ -6,7 +6,7 @@ QueueLock::QueueLock() {
 
 QueueLock::~QueueLock() {}
 
-QueueLock::Result QueueLock::init(std::string queue_file_path) {
+QueueLock::Result QueueLock::init(std::string queue_dir_path) {
     status = Status::OK;
 }
 

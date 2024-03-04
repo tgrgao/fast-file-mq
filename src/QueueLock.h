@@ -16,7 +16,7 @@ class QueueLock {
         QueueLock();
         ~QueueLock();
 
-        Result init(std::string queue_file_path);
+        Result init(std::string queue_dir_path);
 
         Status get_status() const {return status;};
 

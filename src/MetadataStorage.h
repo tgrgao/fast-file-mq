@@ -22,6 +22,7 @@ class MetadataStorage {
         Result init(std::string queue_dir_path);
 
         Status get_status() const {return status;};
+        Result get_queue_size(unsigned *queue_size);
         void make_stale() {status = Status::STALE_METADATA;};
         off_t get_data_end_ptr() const {return metadata.data_end_ptr;};
 

@@ -6,8 +6,19 @@ FileMQ::FileMQ() {
 
 FileMQ::~FileMQ() {}
 
-FileMQ::Result FileMQ::init(std::string queue_file_path) {
-    if (queue_lock.init(queue_file_path) == QueueLock::Result::FAILURE) {
+FileMQ::Result FileMQ::init(std::string queue_dir_path) {
+    if (!std::filesystem::exists(queue_dir_path)) {
+        std::cout << "No existing queue directory not found. Creating queue directory.\n";
+        if (!std::filesystem::create_directories(queue_dir_path)) {
+            std::cout << "Error: Failed to create queue directory.\n";
+            status = Status::INITIALIZATION_FAILED;
+            return Result::FAILURE;
+        }
+    } else {
+        std::cout << "Found existing queue directory.\n";
+    }
+
+    if (queue_lock.init(queue_dir_path) == QueueLock::Result::FAILURE || queue_lock.get_status() == QueueLock::Status::INITIALIZATION_FAILED) {
         status = Status::INITIALIZATION_FAILED;
         return Result::FAILURE;
     }
@@ -17,21 +28,49 @@ FileMQ::Result FileMQ::init(std::string queue_file_path) {
         return Result::FAILURE;
     }
 
-    if (metadata_storage.init(queue_file_path) == MetadataStorage::Result::FAILURE || data_storage.init(queue_file_path) == DataStorage::Result::FAILURE) {
+    if (metadata_storage.init(queue_dir_path) == MetadataStorage::Result::FAILURE || metadata_storage.get_status() == MetadataStorage::Status::INITIALIZATION_FAILED || data_storage.init(queue_dir_path) == DataStorage::Result::FAILURE || data_storage.get_status() == DataStorage::Status::INITIALIZATION_FAILED) {
         status = Status::INITIALIZATION_FAILED;
-    }
-
-    if (metadata_storage.get_status() == MetadataStorage::Status::INITIALIZATION_FAILED || data_storage.get_status() == DataStorage::Status::INITIALIZATION_FAILED || queue_lock.get_status() == QueueLock::Status::INITIALIZATION_FAILED) {
-        status = Status::INITIALIZATION_FAILED;
+        if (queue_lock.unlock() == QueueLock::Result::FAILURE) {
+            status = Status::INITIALIZATION_FAILED;
+            return Result::CRITICAL_FAILURE;
+        }
+        return Result::FAILURE;
     }
 
     if (queue_lock.unlock() == QueueLock::Result::FAILURE) {
         status = Status::INITIALIZATION_FAILED;
-        return Result::FAILURE;
+        return Result::CRITICAL_FAILURE;
     }
 
     status = Status::OK;
     return Result::SUCCESS;
+}
+
+FileMQ::Result FileMQ::get_queue_size(unsigned *queue_size) {
+    auto get_queue_size_inner = [=]() -> Result {
+        metadata_storage.make_stale();
+        if (metadata_storage.get_queue_size(queue_size) != MetadataStorage::Result::SUCCESS) {
+            return FileMQ::Result::FAILURE;
+        }
+        return FileMQ::Result::SUCCESS;
+    };
+
+    if (status != Status::OK) {
+        std::cout << "Error: Queue not OK.\n";
+        return Result::FAILURE;
+    }
+
+    if (queue_lock.lock() == QueueLock::Result::FAILURE) {
+        return Result::FAILURE;
+    }
+
+    Result result = get_queue_size_inner();
+
+    if (queue_lock.unlock() == QueueLock::Result::FAILURE) {
+        return Result::CRITICAL_FAILURE;
+    }
+
+    return result;
 }
 
 FileMQ::Result FileMQ::enqueue(void *buf, unsigned *id, ssize_t size) {

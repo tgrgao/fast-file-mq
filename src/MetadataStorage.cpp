@@ -32,6 +32,7 @@ MetadataStorage::Result MetadataStorage::init(std::string queue_dir_path) {
         metadata_fstream.open(metadata_file_path, std::ios::out | std::ios::binary);
         if (!metadata_fstream.is_open()) {
             std::cout << "Error: failed to create metadata file.\n";
+            std::cout << std::filesystem::current_path() << "\n";
             status = Status::INITIALIZATION_FAILED;
             return Result::FAILURE;
         }
@@ -153,7 +154,23 @@ MetadataStorage::Result MetadataStorage::advance_ack_ptr() {
     return Result::SUCCESS;
 }
 
+MetadataStorage::Result MetadataStorage::get_queue_size(unsigned *queue_size) {
+    if (status != Status::OK && status != Status::STALE_METADATA) {
+        return Result::FAILURE;
+    }
+
+    if (status == Status::STALE_METADATA && read_metadata() != Result::SUCCESS) {
+        return Result::FAILURE;
+    }
+    *queue_size = metadata.queue_size;
+    return Result::SUCCESS;
+}
+
 MetadataStorage::Result MetadataStorage::enqueue(unsigned *id, ssize_t size) {
+    if (status != Status::OK && status != Status::STALE_METADATA) {
+        return Result::FAILURE;
+    }
+
     if (status == Status::STALE_METADATA && read_metadata() != Result::SUCCESS) {
         return Result::FAILURE;
     }
@@ -185,6 +202,10 @@ MetadataStorage::Result MetadataStorage::enqueue(unsigned *id, ssize_t size) {
 }
 
 MetadataStorage::Result MetadataStorage::dequeue(unsigned *id, off_t *data_off, ssize_t *size) {
+    if (status != Status::OK && status != Status::STALE_METADATA) {
+        return Result::FAILURE;
+    }
+
     if (status == Status::STALE_METADATA && read_metadata() != Result::SUCCESS) {
         return Result::FAILURE;
     }
@@ -225,6 +246,10 @@ MetadataStorage::Result MetadataStorage::dequeue(unsigned *id, off_t *data_off, 
 }
 
 MetadataStorage::Result MetadataStorage::ack(unsigned id) {
+    if (status != Status::OK && status != Status::STALE_METADATA) {
+        return Result::FAILURE;
+    }
+
     if (status == Status::STALE_METADATA && read_metadata() != Result::SUCCESS) {
         return Result::FAILURE;
     }
@@ -260,6 +285,10 @@ MetadataStorage::Result MetadataStorage::ack(unsigned id) {
 }
 
 MetadataStorage::Result MetadataStorage::fack(unsigned id) {
+    if (status != Status::OK && status != Status::STALE_METADATA) {
+        return Result::FAILURE;
+    }
+
     if (status == Status::STALE_METADATA && read_metadata() != Result::SUCCESS) {
         return Result::FAILURE;
     }
@@ -295,6 +324,10 @@ MetadataStorage::Result MetadataStorage::fack(unsigned id) {
 }
 
 MetadataStorage::Result MetadataStorage::nack(unsigned id) {
+    if (status != Status::OK && status != Status::STALE_METADATA) {
+        return Result::FAILURE;
+    }
+    
     if (status == Status::STALE_METADATA && read_metadata() != Result::SUCCESS) {
         return Result::FAILURE;
     }
