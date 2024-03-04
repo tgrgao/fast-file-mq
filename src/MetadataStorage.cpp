@@ -272,6 +272,7 @@ MetadataStorage::Result MetadataStorage::ack(unsigned id) {
     }
 
     --metadata.unack_count;
+    --metadata.queue_size;
     
     if (advance_ack_ptr() != Result::SUCCESS) {
         return Result::FAILURE;
@@ -311,6 +312,7 @@ MetadataStorage::Result MetadataStorage::fack(unsigned id) {
     }
 
     --metadata.unack_count;
+    --metadata.queue_size;
     
     if (advance_ack_ptr() != Result::SUCCESS) {
         return Result::FAILURE;
@@ -327,7 +329,7 @@ MetadataStorage::Result MetadataStorage::nack(unsigned id) {
     if (status != Status::OK && status != Status::STALE_METADATA) {
         return Result::FAILURE;
     }
-    
+
     if (status == Status::STALE_METADATA && read_metadata() != Result::SUCCESS) {
         return Result::FAILURE;
     }
