@@ -18,7 +18,7 @@ FileMQ::Result FileMQ::init(std::string queue_dir_path) {
         std::cout << "Found existing queue directory.\n";
     }
 
-    if (queue_lock.init(queue_dir_path) == QueueLock::Result::FAILURE || queue_lock.get_status() == QueueLock::Status::INITIALIZATION_FAILED) {
+    if (queue_lock.init(queue_dir_path) == QueueLock::Result::FAILURE || queue_lock.get_status() != QueueLock::Status::OK) {
         status = Status::INITIALIZATION_FAILED;
         return Result::FAILURE;
     }
@@ -28,7 +28,7 @@ FileMQ::Result FileMQ::init(std::string queue_dir_path) {
         return Result::FAILURE;
     }
 
-    if (metadata_storage.init(queue_dir_path) == MetadataStorage::Result::FAILURE || metadata_storage.get_status() == MetadataStorage::Status::INITIALIZATION_FAILED || data_storage.init(queue_dir_path) == DataStorage::Result::FAILURE || data_storage.get_status() == DataStorage::Status::INITIALIZATION_FAILED) {
+    if (metadata_storage.init(queue_dir_path) == MetadataStorage::Result::FAILURE || metadata_storage.get_status() != MetadataStorage::Status::OK || data_storage.init(queue_dir_path) == DataStorage::Result::FAILURE || data_storage.get_status() != DataStorage::Status::OK) {
         status = Status::INITIALIZATION_FAILED;
         if (queue_lock.unlock() == QueueLock::Result::FAILURE) {
             status = Status::INITIALIZATION_FAILED;
@@ -177,7 +177,7 @@ FileMQ::Result FileMQ::ack(unsigned id) {
 
     Result result = ack_inner();
 
-    if (queue_lock.lock() == QueueLock::Result::FAILURE) {
+    if (queue_lock.unlock() == QueueLock::Result::FAILURE) {
         return Result::CRITICAL_FAILURE;
     }
 
@@ -206,7 +206,7 @@ FileMQ::Result FileMQ::fack(unsigned id) {
 
     Result result = fack_inner();
 
-    if (queue_lock.lock() == QueueLock::Result::FAILURE) {
+    if (queue_lock.unlock() == QueueLock::Result::FAILURE) {
         return Result::CRITICAL_FAILURE;
     }
 
@@ -235,7 +235,7 @@ FileMQ::Result FileMQ::nack(unsigned id) {
 
     Result result = nack_inner();
 
-    if (queue_lock.lock() == QueueLock::Result::FAILURE) {
+    if (queue_lock.unlock() == QueueLock::Result::FAILURE) {
         return Result::CRITICAL_FAILURE;
     }
 

@@ -1,4 +1,6 @@
 #include <string>
+#include <mutex>
+#include <fcntl.h>
 
 class QueueLock {
     public:
@@ -25,4 +27,7 @@ class QueueLock {
 
     private:
         Status status;
+        std::mutex thread_mutex;
+        int file_lock_fd;
+        struct flock file_lock;
 };
