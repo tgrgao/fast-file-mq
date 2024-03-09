@@ -31,6 +31,8 @@ class MetadataStorage {
         Result ack(unsigned id);
         Result fack(unsigned id);
         Result nack(unsigned id);
+
+        Result purge(off_t *data_bytes_trimmed);
     
     private: 
 
@@ -40,7 +42,6 @@ class MetadataStorage {
             unsigned at_id;
             unsigned ready_count;
             unsigned unack_count;
-            off_t start_ptr;
             off_t ack_ptr;
             off_t ready_ptr;
             off_t data_end_ptr;

@@ -1,4 +1,5 @@
 #include "DataStorage.h"
+#include "helper.h"
 
 #include <iostream>
 
@@ -49,5 +50,11 @@ DataStorage::Result DataStorage::get_data(void *buf, off_t offset, ssize_t size)
         std::cout << "Error: failed to read data from file.\n";
         return Result::FAILURE;
     }
+    return Result::SUCCESS;
+}
+
+DataStorage::Result DataStorage::purge(off_t data_bytes_trimmed) {
+    trim_file_from_beginning(data_fstream, data_bytes_trimmed, 4096);
+
     return Result::SUCCESS;
 }

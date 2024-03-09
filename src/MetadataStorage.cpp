@@ -1,4 +1,5 @@
 #include "MetadataStorage.h"
+#include "helper.h"
 
 #include <iostream>
 
@@ -50,7 +51,6 @@ MetadataStorage::Result MetadataStorage::init(std::string queue_dir_path) {
         metadata.at_id = 0;
         metadata.ready_count = 0;
         metadata.unack_count = 0;
-        metadata.start_ptr = 0;
         metadata.ack_ptr = 0;
         metadata.ready_ptr = 0;
         metadata.data_end_ptr = 0;
@@ -356,6 +356,54 @@ MetadataStorage::Result MetadataStorage::nack(unsigned id) {
     
     if (id < metadata.ready_ptr) {
         metadata.ready_ptr = id;
+    }
+
+    if (write_metadata() != Result::SUCCESS) {
+        return Result::FAILURE;
+    }
+
+    return Result::SUCCESS;
+}
+
+MetadataStorage::Result MetadataStorage::purge(off_t *data_bytes_trimmed) {
+    if (status != Status::OK && status != Status::STALE_METADATA) {
+        return Result::FAILURE;
+    }
+
+    if (status == Status::STALE_METADATA && read_metadata() != Result::SUCCESS) {
+        return Result::FAILURE;
+    }
+
+    if (metadata.ack_ptr == metadata.at_id) {
+        return Result::SUCCESS; // nothing to do
+    }
+
+    struct MetadataEntry first_not_acked;
+    unsigned entry_pos = metadata.ack_ptr - metadata.smallest_id;
+    if (read_entry(&first_not_acked, entry_pos) != Result::SUCCESS) {
+        return Result::FAILURE;
+    }
+
+    *data_bytes_trimmed = first_not_acked.data_off;
+    off_t entries_bytes_trimmed = entry_pos * sizeof(struct MetadataEntry);
+
+    trim_file_from_beginning(entries_fstream, entries_bytes_trimmed, 4096);
+
+    metadata.smallest_id = metadata.ack_ptr;
+    metadata.data_end_ptr -= *data_bytes_trimmed;
+    metadata.queue_size = metadata.at_id - metadata.smallest_id;
+
+    // update the data offset values in all the remaining entries
+    for (unsigned i = metadata.smallest_id; i < metadata.at_id; ++i) {
+        MetadataEntry entry;
+        unsigned pos = metadata.ready_ptr - metadata.smallest_id;
+        if (read_entry(&entry, pos) != Result::SUCCESS) {
+            return Result::FAILURE;
+        }
+        entry.data_off -= *data_bytes_trimmed;
+        if (write_entry(&entry, pos) != Result::SUCCESS) {
+            return Result::FAILURE;
+        }
     }
 
     if (write_metadata() != Result::SUCCESS) {

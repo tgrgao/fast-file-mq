@@ -25,6 +25,7 @@ add_executable(
   src/QueueLock.cpp
   src/DataStorage.cpp
   src/MetadataStorage.cpp
+  src/helper.cpp
   src/FileMQ.h
 )
 target_link_libraries(

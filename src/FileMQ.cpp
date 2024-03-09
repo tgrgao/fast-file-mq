@@ -241,3 +241,39 @@ FileMQ::Result FileMQ::nack(unsigned id) {
 
     return result;
 }
+
+FileMQ::Result FileMQ::purge() {
+    auto purge_inner = [=]() -> Result {
+        metadata_storage.make_stale();
+
+        off_t data_bytes_trimmed;
+
+        if (metadata_storage.purge(&data_bytes_trimmed) != MetadataStorage::Result::SUCCESS) {
+            return Result::CRITICAL_FAILURE; // this is a critical failure because likely part of the metadata has already been changed
+            // TODO: Add critical failure codes to MetadataStorage::Result to differentiate
+        }
+
+        if (data_storage.purge(data_bytes_trimmed) != DataStorage::Result::SUCCESS) {
+            return Result::CRITICAL_FAILURE; // this is a critical failure because the metadata has already been purged
+        }
+
+        return Result::SUCCESS;
+    };
+
+    if (status != Status::OK) {
+        std::cout << "Error: Queue not OK.\n";
+        return Result::FAILURE;
+    }
+
+    if (queue_lock.lock() == QueueLock::Result::FAILURE) {
+        return Result::FAILURE;
+    }
+
+    Result result = purge_inner();
+
+    if (queue_lock.unlock() == QueueLock::Result::FAILURE) {
+        return Result::CRITICAL_FAILURE;
+    }
+
+    return result;
+}

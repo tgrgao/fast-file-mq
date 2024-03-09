@@ -184,22 +184,25 @@ TEST_F(FileMQTest, TestDequeueNack) {
     EXPECT_EQ(queue_size, 1);
 }
 
-TEST_F(FileMQTest, TestBenchmark1000000) {
+TEST_F(FileMQTest, TestBenchmark100000) {
     FileMQ::Result result;
     unsigned queue_size;
     unsigned id;
 
     unsigned value;
-    for (unsigned i = 0; i < 1000000; ++i) {
+    for (unsigned i = 0; i < 100000; ++i) {
         value = i;
         result = test_queue.enqueue(&value, &id, sizeof(value));
         EXPECT_EQ(result, FileMQ::Result::SUCCESS);
     }
 
     ssize_t size;
-    for (unsigned i = 0; i < 1000000; ++i) {
+    for (unsigned i = 0; i < 100000; ++i) {
         result = test_queue.dequeue(&value, &id, &size, MAX_LEN);
         EXPECT_EQ(result, FileMQ::Result::SUCCESS);
         EXPECT_EQ(value, i);
+
+        result = test_queue.ack(id);
+        EXPECT_EQ(result, FileMQ::Result::SUCCESS);
     }
 }

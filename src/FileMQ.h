@@ -38,6 +38,8 @@ class FileMQ {
         Result nack(unsigned id);
         Result fack(unsigned id);
 
+        Result purge();
+
     private:
         Status status;
         QueueLock queue_lock;

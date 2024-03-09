@@ -23,6 +23,8 @@ class DataStorage {
         Result put_data(void *buf, ssize_t size);
         Result get_data(void *buf, off_t offset, ssize_t size);
 
+        Result purge(off_t data_bytes_trimmed);
+
     private:
         Status status;
         std::fstream data_fstream;
