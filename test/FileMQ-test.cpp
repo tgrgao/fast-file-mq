@@ -28,6 +28,12 @@ TEST_F(FileMQTest, TestInit) {
     result = test_queue.get_queue_size(&queue_size);
     EXPECT_EQ(result, FileMQ::Result::SUCCESS);
     EXPECT_EQ(queue_size, 0);
+
+    unsigned id = UINT32_MAX;
+    ssize_t size;
+    char buf2[10];
+    result = test_queue.dequeue(buf2, &id, &size, 10);
+    EXPECT_EQ(result, FileMQ::Result::QUEUE_EMPTY);
 }
 
 TEST_F(FileMQTest, TestEnqueueDequeue1) {
@@ -172,6 +178,10 @@ TEST_F(FileMQTest, TestDequeueNack) {
     result = test_queue.dequeue(&value, &id, &size, MAX_LEN);
     EXPECT_EQ(result, FileMQ::Result::QUEUE_EMPTY);
 
+    unsigned id2;
+    result = test_queue.dequeue(&value, &id2, &size, MAX_LEN);
+    EXPECT_EQ(result, FileMQ::Result::QUEUE_EMPTY);
+
     result = test_queue.nack(id);
     EXPECT_EQ(result, FileMQ::Result::SUCCESS);
 
@@ -182,6 +192,48 @@ TEST_F(FileMQTest, TestDequeueNack) {
     result = test_queue.get_queue_size(&queue_size);
     EXPECT_EQ(result, FileMQ::Result::SUCCESS);
     EXPECT_EQ(queue_size, 1);
+}
+
+TEST_F(FileMQTest, TestPurge) {
+    FileMQ::Result result;
+    unsigned id;
+
+    unsigned value;
+    for (unsigned i = 0; i < 1000; ++i) {
+        value = i;
+        result = test_queue.enqueue(&value, &id, sizeof(value));
+        EXPECT_EQ(result, FileMQ::Result::SUCCESS);
+    }
+
+    ssize_t size;
+    for (unsigned i = 0; i < 500; ++i) {
+        result = test_queue.dequeue(&value, &id, &size, MAX_LEN);
+        EXPECT_EQ(result, FileMQ::Result::SUCCESS);
+        EXPECT_EQ(value, i);
+
+        result = test_queue.ack(id);
+        EXPECT_EQ(result, FileMQ::Result::SUCCESS);
+    }
+
+    unsigned prepurge_queue_size;
+    result = test_queue.get_queue_size(&prepurge_queue_size);
+    EXPECT_EQ(result, FileMQ::Result::SUCCESS);
+
+    unsigned prepurge_total_size;
+    result = test_queue.get_total_size(&prepurge_total_size);
+    EXPECT_EQ(result, FileMQ::Result::SUCCESS);
+
+    result = test_queue.purge();
+    EXPECT_EQ(result, FileMQ::Result::SUCCESS);
+
+    unsigned queue_size;
+    result = test_queue.get_queue_size(&queue_size);
+    EXPECT_EQ(queue_size, prepurge_queue_size);
+
+    unsigned total_size;
+    result = test_queue.get_queue_size(&total_size);
+    EXPECT_LT(total_size, prepurge_total_size);
+    EXPECT_EQ(total_size, 500);
 }
 
 TEST_F(FileMQTest, TestBenchmark100000) {
@@ -203,6 +255,33 @@ TEST_F(FileMQTest, TestBenchmark100000) {
         EXPECT_EQ(value, i);
 
         result = test_queue.ack(id);
+        EXPECT_EQ(result, FileMQ::Result::SUCCESS);
+    }
+}
+
+TEST_F(FileMQTest, TestBenchmark100000Alternating) {
+    FileMQ::Result result;
+    unsigned queue_size;
+    unsigned id;
+
+    unsigned value;
+    for (unsigned i = 0; i < 100000; ++i) {
+        value = i;
+        result = test_queue.enqueue(&value, &id, sizeof(value));
+        EXPECT_EQ(result, FileMQ::Result::SUCCESS);
+    }
+
+    ssize_t size;
+    for (unsigned i = 0; i < 100000; ++i) {
+        result = test_queue.dequeue(&value, &id, &size, MAX_LEN);
+        EXPECT_EQ(result, FileMQ::Result::SUCCESS);
+        EXPECT_EQ(value, i);
+
+        result = test_queue.ack(id);
+        EXPECT_EQ(result, FileMQ::Result::SUCCESS);
+
+        value = i;
+        result = test_queue.enqueue(&value, &id, sizeof(value));
         EXPECT_EQ(result, FileMQ::Result::SUCCESS);
     }
 }

@@ -30,6 +30,7 @@ class FileMQ {
         Result init(std::string queue_dir_path);
 
         Status get_status() const {return status;};
+        Result get_total_size(unsigned *total_size);
         Result get_queue_size(unsigned *queue_size);
 
         Result enqueue(void *buf, unsigned *id, ssize_t size);

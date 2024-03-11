@@ -73,6 +73,33 @@ FileMQ::Result FileMQ::get_queue_size(unsigned *queue_size) {
     return result;
 }
 
+FileMQ::Result FileMQ::get_total_size(unsigned *total_size) {
+    auto get_total_size_inner = [=]() -> Result {
+        metadata_storage.make_stale();
+        if (metadata_storage.get_total_size(total_size) != MetadataStorage::Result::SUCCESS) {
+            return FileMQ::Result::FAILURE;
+        }
+        return FileMQ::Result::SUCCESS;
+    };
+
+    if (status != Status::OK) {
+        std::cout << "Error: Queue not OK.\n";
+        return Result::FAILURE;
+    }
+
+    if (queue_lock.lock() == QueueLock::Result::FAILURE) {
+        return Result::FAILURE;
+    }
+
+    Result result = get_total_size_inner();
+
+    if (queue_lock.unlock() == QueueLock::Result::FAILURE) {
+        return Result::CRITICAL_FAILURE;
+    }
+
+    return result;
+}
+
 FileMQ::Result FileMQ::enqueue(void *buf, unsigned *id, ssize_t size) {
     auto enqueue_inner = [=]() -> Result {
         metadata_storage.make_stale();

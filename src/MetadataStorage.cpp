@@ -46,6 +46,7 @@ MetadataStorage::Result MetadataStorage::init(std::string queue_dir_path) {
             return Result::FAILURE;
         }
 
+        metadata.total_size = 0;
         metadata.queue_size = 0;
         metadata.smallest_id = 0;
         metadata.at_id = 0;
@@ -166,6 +167,18 @@ MetadataStorage::Result MetadataStorage::get_queue_size(unsigned *queue_size) {
     return Result::SUCCESS;
 }
 
+MetadataStorage::Result MetadataStorage::get_total_size(unsigned *total_size) {
+    if (status != Status::OK && status != Status::STALE_METADATA) {
+        return Result::FAILURE;
+    }
+
+    if (status == Status::STALE_METADATA && read_metadata() != Result::SUCCESS) {
+        return Result::FAILURE;
+    }
+    *total_size = metadata.total_size;
+    return Result::SUCCESS;
+}
+
 MetadataStorage::Result MetadataStorage::enqueue(unsigned *id, ssize_t size) {
     if (status != Status::OK && status != Status::STALE_METADATA) {
         return Result::FAILURE;
@@ -189,6 +202,7 @@ MetadataStorage::Result MetadataStorage::enqueue(unsigned *id, ssize_t size) {
         return Result::FAILURE;
     }
 
+    ++metadata.total_size;
     ++metadata.queue_size;
     ++metadata.ready_count;
     ++metadata.at_id;
@@ -391,7 +405,8 @@ MetadataStorage::Result MetadataStorage::purge(off_t *data_bytes_trimmed) {
 
     metadata.smallest_id = metadata.ack_ptr;
     metadata.data_end_ptr -= *data_bytes_trimmed;
-    metadata.queue_size = metadata.at_id - metadata.smallest_id;
+    metadata.total_size = metadata.at_id - metadata.smallest_id;
+    metadata.queue_size = 0;
 
     // update the data offset values in all the remaining entries
     for (unsigned i = metadata.smallest_id; i < metadata.at_id; ++i) {
@@ -399,6 +414,9 @@ MetadataStorage::Result MetadataStorage::purge(off_t *data_bytes_trimmed) {
         unsigned pos = metadata.ready_ptr - metadata.smallest_id;
         if (read_entry(&entry, pos) != Result::SUCCESS) {
             return Result::FAILURE;
+        }
+        if (entry.status == MetadataEntry::EntryStatus::READY || entry.status == MetadataEntry::EntryStatus::UNACK) {
+            ++metadata.queue_size;
         }
         entry.data_off -= *data_bytes_trimmed;
         if (write_entry(&entry, pos) != Result::SUCCESS) {
