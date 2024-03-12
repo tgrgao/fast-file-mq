@@ -7,6 +7,8 @@ FileMQ::FileMQ() {
 FileMQ::~FileMQ() {}
 
 FileMQ::Result FileMQ::init(std::string queue_dir_path) {
+    this->queue_dir_path = queue_dir_path;
+    
     if (!std::filesystem::exists(queue_dir_path)) {
         std::cout << "No existing queue directory not found. Creating queue directory.\n";
         if (!std::filesystem::create_directories(queue_dir_path)) {

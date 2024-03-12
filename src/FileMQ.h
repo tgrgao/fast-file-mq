@@ -42,6 +42,7 @@ class FileMQ {
         Result purge();
 
     private:
+        std::string queue_dir_path;
         Status status;
         QueueLock queue_lock;
         MetadataStorage metadata_storage;

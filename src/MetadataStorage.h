@@ -62,6 +62,7 @@ class MetadataStorage {
             EntryStatus status;
         };
 
+        std::string queue_dir_path;
         Status status;
         struct Metadata metadata;
         std::fstream metadata_fstream;

@@ -10,6 +10,7 @@ DataStorage::DataStorage() {
 DataStorage::~DataStorage() {}
 
 DataStorage::Result DataStorage::init(std::string queue_dir_path) {
+    this->queue_dir_path = queue_dir_path;
     std::string data_file_path = queue_dir_path + "/data.bytes";
 
     if (!std::filesystem::exists(data_file_path)) {
@@ -44,7 +45,7 @@ DataStorage::Result DataStorage::put_data(void *buf, ssize_t size) {
 }
 
 DataStorage::Result DataStorage::get_data(void *buf, off_t offset, ssize_t size) {
-    data_fstream.seekp(offset);
+    data_fstream.seekp(offset, std::ios::beg);
     data_fstream.read(reinterpret_cast<char*>(buf), size);
     if (!data_fstream) {
         std::cout << "Error: failed to read data from file.\n";
@@ -54,7 +55,6 @@ DataStorage::Result DataStorage::get_data(void *buf, off_t offset, ssize_t size)
 }
 
 DataStorage::Result DataStorage::purge(off_t data_bytes_trimmed) {
-    trim_file_from_beginning(data_fstream, data_bytes_trimmed, 4096);
-
+    trim_file_from_beginning(data_fstream, data_bytes_trimmed, queue_dir_path, "/data.bytes");    
     return Result::SUCCESS;
 }

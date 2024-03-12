@@ -2,6 +2,7 @@
 #include "helper.h"
 
 #include <iostream>
+#include <vector>
 
 MetadataStorage::MetadataStorage() {
     status = Status::NOT_INITIALIZED;
@@ -10,6 +11,7 @@ MetadataStorage::MetadataStorage() {
 MetadataStorage::~MetadataStorage() {}
 
 MetadataStorage::Result MetadataStorage::init(std::string queue_dir_path) {
+    this->queue_dir_path = queue_dir_path;
     std::string metadata_file_path = queue_dir_path + "/metadata.bytes";
     std::string entries_file_path = queue_dir_path + "/entries.bytes";
 
@@ -225,7 +227,6 @@ MetadataStorage::Result MetadataStorage::dequeue(unsigned *id, off_t *data_off, 
     }
 
     if (metadata.ready_ptr >= metadata.at_id) {
-        std::cout << metadata.ready_ptr << " " << metadata.at_id;
         return Result::QUEUE_EMPTY;
     }
 
@@ -401,7 +402,7 @@ MetadataStorage::Result MetadataStorage::purge(off_t *data_bytes_trimmed) {
     *data_bytes_trimmed = first_not_acked.data_off;
     off_t entries_bytes_trimmed = entry_pos * sizeof(struct MetadataEntry);
 
-    trim_file_from_beginning(entries_fstream, entries_bytes_trimmed, 4096);
+    trim_file_from_beginning(entries_fstream, entries_bytes_trimmed, queue_dir_path, "/entries.bytes");
 
     metadata.smallest_id = metadata.ack_ptr;
     metadata.data_end_ptr -= *data_bytes_trimmed;
@@ -411,7 +412,7 @@ MetadataStorage::Result MetadataStorage::purge(off_t *data_bytes_trimmed) {
     // update the data offset values in all the remaining entries
     for (unsigned i = metadata.smallest_id; i < metadata.at_id; ++i) {
         MetadataEntry entry;
-        unsigned pos = metadata.ready_ptr - metadata.smallest_id;
+        unsigned pos = i - metadata.smallest_id;
         if (read_entry(&entry, pos) != Result::SUCCESS) {
             return Result::FAILURE;
         }

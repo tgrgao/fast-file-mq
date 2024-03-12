@@ -26,6 +26,7 @@ class DataStorage {
         Result purge(off_t data_bytes_trimmed);
 
     private:
+        std::string queue_dir_path;
         Status status;
         std::fstream data_fstream;
 };
