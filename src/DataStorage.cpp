@@ -45,7 +45,7 @@ DataStorage::Result DataStorage::put_data(void *buf, ssize_t size) {
 }
 
 DataStorage::Result DataStorage::get_data(void *buf, off_t offset, ssize_t size) {
-    data_fstream.seekp(offset, std::ios::beg);
+    data_fstream.seekg(offset, std::ios::beg);
     data_fstream.read(reinterpret_cast<char*>(buf), size);
     if (!data_fstream) {
         std::cout << "Error: failed to read data from file.\n";

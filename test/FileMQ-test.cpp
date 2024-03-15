@@ -175,10 +175,7 @@ TEST_F(FileMQTest, TestDequeueNack) {
     EXPECT_EQ(result, FileMQ::Result::SUCCESS);
     EXPECT_EQ(id, 0);
 
-    result = test_queue.dequeue(&value, &id, &size, MAX_LEN);
-    EXPECT_EQ(result, FileMQ::Result::QUEUE_EMPTY);
-
-    unsigned id2;
+    unsigned id2; // to preserve the previously dequeued id
     result = test_queue.dequeue(&value, &id2, &size, MAX_LEN);
     EXPECT_EQ(result, FileMQ::Result::QUEUE_EMPTY);
 
