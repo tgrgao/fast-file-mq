@@ -1,8 +1,7 @@
-#FileMQ
-
+# FileMQ
 This project is inspired by [persist-queue](https://github.com/peter-wangxu/persist-queue/tree/master). The acknowledgement queue in persist-queue uses SQLite to implement its persistent acknowledgement queue, but it has been found to not be performant when the queue becomes too large. Investigations have shown that the performance bottleneck is in how SQLite is used as the queue's persistence engine. This project borrows many aspects of the interface from persist-queue's SQLAckQueue and seeks to implement a persistent acknowledgement queue with improved performance by implementing in C++ and writing directly to metadata and data files instead of using SQLite. This queue is both thread-safe and process-safe.
 
-##Usage
+## Usage
 FileMQ persists its data by writing every change of queue state into metadata and data files that are stored in a directory, whose path is passed as part of the queue's initialization method.
 
 `FileMQ test_queue;`
