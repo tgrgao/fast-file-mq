@@ -197,8 +197,9 @@ TEST_F(FileMQTest, TestPurge) {
 
     unsigned value;
 
-    unsigned total_enqueues = 1000;
-    unsigned prepurge_dequeues = 500;
+    unsigned total_enqueues = 1500;
+    unsigned prepurge_dequeues = 1000;
+    unsigned prepurge_acks = 500;
 
     for (unsigned i = 0; i < total_enqueues; ++i) {
         value = i;
@@ -207,7 +208,7 @@ TEST_F(FileMQTest, TestPurge) {
     }
 
     ssize_t size;
-    for (unsigned i = 0; i < prepurge_dequeues; ++i) {
+    for (unsigned i = 0; i < prepurge_acks; ++i) {
         result = test_queue.dequeue(&value, &id, &size, MAX_LEN);
         EXPECT_EQ(result, FileMQ::Result::SUCCESS);
         EXPECT_EQ(value, i);
@@ -216,10 +217,16 @@ TEST_F(FileMQTest, TestPurge) {
         EXPECT_EQ(result, FileMQ::Result::SUCCESS);
     }
 
+    for (unsigned i = prepurge_acks; i < prepurge_dequeues; ++i) {
+        result = test_queue.dequeue(&value, &id, &size, MAX_LEN);
+        EXPECT_EQ(result, FileMQ::Result::SUCCESS);
+        EXPECT_EQ(value, i);
+    }
+
     unsigned prepurge_queue_size;
     result = test_queue.get_queue_size(&prepurge_queue_size);
     EXPECT_EQ(result, FileMQ::Result::SUCCESS);
-    EXPECT_EQ(prepurge_queue_size, total_enqueues - prepurge_dequeues);
+    EXPECT_EQ(prepurge_queue_size, total_enqueues - prepurge_acks);
 
     unsigned prepurge_total_size;
     result = test_queue.get_total_size(&prepurge_total_size);
@@ -234,7 +241,7 @@ TEST_F(FileMQTest, TestPurge) {
     EXPECT_EQ(queue_size, prepurge_queue_size);
 
     unsigned total_size;
-    result = test_queue.get_queue_size(&total_size);
+    result = test_queue.get_total_size(&total_size);
     EXPECT_LT(total_size, prepurge_total_size);
     EXPECT_EQ(total_size, prepurge_queue_size);
 
@@ -245,16 +252,26 @@ TEST_F(FileMQTest, TestPurge) {
         EXPECT_EQ(result, FileMQ::Result::SUCCESS);
     }
 
-    for (unsigned i = 0; i < total_enqueues; ++i) {
+    for (unsigned i = 0; i < 2 * (total_enqueues - prepurge_dequeues); ++i) {
         result = test_queue.dequeue(&value, &id, &size, MAX_LEN);
         EXPECT_EQ(result, FileMQ::Result::SUCCESS);
-        if (i < prepurge_dequeues) {
+        if (i < total_enqueues - prepurge_dequeues) {
             EXPECT_EQ(value, i + prepurge_dequeues);
         } else {
-            EXPECT_EQ(value, i - prepurge_dequeues);
+            EXPECT_EQ(value, i - (total_enqueues - prepurge_dequeues));
         }
 
         result = test_queue.ack(id);
+        EXPECT_EQ(result, FileMQ::Result::SUCCESS);
+    }
+
+    // test unacked entries from before purge
+
+    result = test_queue.get_queue_size(&queue_size);
+    EXPECT_EQ(queue_size, prepurge_dequeues - prepurge_acks);
+
+    for (unsigned i = prepurge_acks; i < prepurge_dequeues; ++i) {
+        result = test_queue.ack(i);
         EXPECT_EQ(result, FileMQ::Result::SUCCESS);
     }
 }
