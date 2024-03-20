@@ -3,6 +3,8 @@
 #include <fstream>
 #include <iostream>
 
+#include <cerrno>  // for errno
+
 QueueLock::QueueLock() {
     status = Status::NOT_INITIALIZED;
 }
@@ -41,7 +43,7 @@ QueueLock::Result QueueLock::lock() {
 
     file_lock.l_type = F_WRLCK; // Exclusive lock
     if (fcntl(file_lock_fd, F_SETLK, &file_lock) == -1) {
-        std::cout << "Error: failed to lock file lock.\n";
+        std::cout << "Error: failed to lock file lock. " << std::strerror(errno) << "\n";
         return Result::FAILURE;
     }
 
@@ -51,7 +53,7 @@ QueueLock::Result QueueLock::lock() {
 QueueLock::Result QueueLock::unlock() {
     file_lock.l_type = F_UNLCK;
     if (fcntl(file_lock_fd, F_SETLK, &file_lock) == -1) {
-        std::cout << "Error: failed to unlock file lock.\n";
+        std::cout << "Error: failed to unlock file lock. " << std::strerror(errno) << "\n";
         return Result::FAILURE;
     }
 
